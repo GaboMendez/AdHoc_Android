@@ -3,6 +3,7 @@ package com.usj.adhoc
 import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
@@ -26,16 +30,15 @@ import com.usj.adhoc.ui.theme.AdHocTheme
 class MainActivity : ComponentActivity() {
 
     private val viewModel: AppViewModel by viewModels()
-    private var btManager: BtManager? = null
+    private var btManager: BtManager? by mutableStateOf(null)
 
     // ── Permission request ────────────────────────────────────────────────────
 
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { granted ->
-        if (granted.values.all { it }) {
-            initBluetooth()
-        }
+    ) { _ ->
+        // Always attempt init — paired-device use doesn't need scan/location granted
+        initBluetooth()
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -105,12 +108,18 @@ class MainActivity : ComponentActivity() {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun checkAndRequestPermissions() {
-        val needed = arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.INTERNET
-        )
+        // On API < 31 BLUETOOTH / BLUETOOTH_ADMIN are normal (auto-granted).
+        // Only ACCESS_FINE_LOCATION needs a runtime request on those versions.
+        val needed: Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
         val allGranted = needed.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }

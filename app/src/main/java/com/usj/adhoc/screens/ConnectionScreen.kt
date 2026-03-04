@@ -70,26 +70,24 @@ fun ConnectionScreen(
             BtConnectionState.DISCONNECTED -> {
                 if (bluetoothManager == null) {
                     Text(
-                        "Bluetooth no disponible o permisos no otorgados.",
-                        color = MaterialTheme.colorScheme.error
+                        "Inicializando Bluetooth…",
+                        color = MaterialTheme.colorScheme.outline
                     )
+                } else if (pairedDevices.isEmpty()) {
+                    Text("No hay dispositivos emparejados.\nVe a Ajustes → Bluetooth, empareja tu dispositivo y vuelve aquí.")
                 } else {
                     Text(
-                        "Dispositivos HC-05 emparejados:",
+                        "Dispositivos ya emparejados:",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    if (pairedDevices.isEmpty()) {
-                        Text("No hay dispositivos emparejados.\nVe a Ajustes → Bluetooth y empareja el HC-05 primero.")
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(pairedDevices) { device ->
-                                BluetoothDeviceCard(device) {
-                                    viewModel.setBtState(BtConnectionState.CONNECTING)
-                                    viewModel.setConnectedDeviceName(
-                                        device.name ?: device.address
-                                    )
-                                    bluetoothManager.connect(device)
-                                }
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(pairedDevices) { device ->
+                            BluetoothDeviceCard(device) {
+                                viewModel.setBtState(BtConnectionState.CONNECTING)
+                                viewModel.setConnectedDeviceName(
+                                    device.name ?: device.address
+                                )
+                                bluetoothManager.connect(device)
                             }
                         }
                     }
