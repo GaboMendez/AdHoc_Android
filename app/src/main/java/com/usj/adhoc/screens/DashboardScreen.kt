@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.usj.adhoc.AppViewModel
+import com.usj.adhoc.model.DoorStatus
 
 /**
  * Screen 2 – Sensor Dashboard
@@ -35,6 +37,7 @@ fun DashboardScreen(
         SensorCard(label = "🌡 Temperatura", value = data.temperature.formatSensor("°C"))
         SensorCard(label = "💧 Humedad", value = data.humidity.formatSensor("%"))
         SensorCard(label = "📏 Distancia", value = data.distance.formatSensor("cm"))
+        DoorCard(status = data.doorStatus)
 
         if (rawData.isNotEmpty()) {
             Text(
@@ -68,6 +71,34 @@ fun DashboardScreen(
             ) {
                 Text("WiFi AdHoc")
             }
+        }
+    }
+}
+
+@Composable
+fun DoorCard(status: DoorStatus) {
+    val (icon, label, color) = when (status) {
+        DoorStatus.OPEN    -> Triple("🟢", "OPEN",    Color(0xFF2E7D32))
+        DoorStatus.CLOSED  -> Triple("🔴", "CLOSED", Color(0xFFC62828))
+        DoorStatus.UNKNOWN -> Triple("⚪", "--",     Color(0xFF9E9E9E))
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 20.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("🚪 Puerta", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "$icon $label",
+                style = MaterialTheme.typography.headlineSmall,
+                color = color
+            )
         }
     }
 }

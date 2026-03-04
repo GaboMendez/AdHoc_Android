@@ -1,5 +1,6 @@
 package com.usj.adhoc.server
 
+import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
 import fi.iki.elonen.NanoHTTPD
 
@@ -18,7 +19,8 @@ class AdHocHttpServer(
             append("{")
             append("\"temp\": ${data.temperature},")
             append("\"hum\": ${data.humidity},")
-            append("\"dist\": ${data.distance}")
+            append("\"dist\": ${data.distance},")
+            append("\"door\": \"${data.doorStatus.name}\"")
             append("}")
         }
         val response = newFixedLengthResponse(Response.Status.OK, "application/json", json)

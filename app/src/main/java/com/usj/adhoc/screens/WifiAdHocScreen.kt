@@ -10,6 +10,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.usj.adhoc.AppViewModel
 import com.usj.adhoc.DeviceRole
+import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
 import com.usj.adhoc.server.AdHocHttpServer
 import kotlinx.coroutines.Dispatchers
@@ -303,7 +304,12 @@ private suspend fun fetchData(
             SensorData(
                 temperature = json.getDouble("temp").toFloat(),
                 humidity = json.getDouble("hum").toFloat(),
-                distance = json.getDouble("dist").toFloat()
+                distance = json.getDouble("dist").toFloat(),
+                doorStatus = when (json.optString("door", "UNKNOWN").uppercase()) {
+                    "OPEN"   -> DoorStatus.OPEN
+                    "CLOSED" -> DoorStatus.CLOSED
+                    else     -> DoorStatus.UNKNOWN
+                }
             )
         )
     } catch (e: Exception) {

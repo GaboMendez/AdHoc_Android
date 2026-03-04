@@ -28,7 +28,7 @@ fun ControlScreen(
         HorizontalDivider()
 
         // ── LED Section ───────────────────────────────────────────────────────
-        Text("💡 LED", style = MaterialTheme.typography.titleLarge)
+        Text("💡 LED", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -51,9 +51,32 @@ fun ControlScreen(
         }
 
         HorizontalDivider()
+        // ── Door Section ──────────────────────────────────────────────────────────
+        Text("🚪 Puerta", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Button(
+                onClick = { bluetoothManager?.sendData("DOOR_OPEN") },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Abrir")
+            }
+            OutlinedButton(
+                onClick = { bluetoothManager?.sendData("DOOR_CLOSE") },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cerrar")
+            }
+        }
 
+        HorizontalDivider()
         // ── Buzzer Section ────────────────────────────────────────────────────
-        Text("🔔 Buzzer", style = MaterialTheme.typography.titleLarge)
+        Text("🔔 Buzzer", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()

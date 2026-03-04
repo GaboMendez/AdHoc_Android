@@ -1,6 +1,7 @@
 package com.usj.adhoc
 
 import androidx.lifecycle.ViewModel
+import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +47,14 @@ class AppViewModel : ViewModel() {
             _sensorData.value = SensorData(
                 temperature = parts[0].trim().toFloatOrNan(),
                 humidity    = parts[1].trim().toFloatOrNan(),
-                distance    = parts[2].trim().toFloatOrNan()
+                distance    = parts[2].trim().toFloatOrNan(),
+                doorStatus  = if (parts.size >= 4) {
+                    when (parts[3].trim().uppercase()) {
+                        "OPEN"   -> DoorStatus.OPEN
+                        "CLOSED" -> DoorStatus.CLOSED
+                        else     -> DoorStatus.UNKNOWN
+                    }
+                } else DoorStatus.UNKNOWN
             )
             _rawData.value = raw.trim()
         }
