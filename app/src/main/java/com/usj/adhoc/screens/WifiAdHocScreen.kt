@@ -10,6 +10,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.usj.adhoc.AppViewModel
 import com.usj.adhoc.DeviceRole
+import androidx.compose.ui.graphics.Color
 import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
 import com.usj.adhoc.server.AdHocHttpServer
@@ -162,6 +163,15 @@ fun WifiAdHocScreen(
                         Text("Temp: ${sensorData.temperature.fmtServer()} °C")
                         Text("Hum:  ${sensorData.humidity.fmtServer()} %")
                         Text("Dist: ${sensorData.distance.fmtServer()} cm")
+                        if (sensorData.doorStatus != DoorStatus.UNKNOWN) {
+                            val doorText = if (sensorData.doorStatus == DoorStatus.OPEN)
+                                "🟢 Puerta: ABIERTA" else "🔴 Puerta: CERRADA"
+                            Text(
+                                text = doorText,
+                                color = if (sensorData.doorStatus == DoorStatus.OPEN)
+                                    Color(0xFF2E7D32) else Color(0xFFC62828)
+                            )
+                        }                      
                     }
                 }
             }
@@ -258,6 +268,13 @@ fun WifiAdHocScreen(
                         Text("🌡 Temperatura: ${data.temperature.fmtServer()} °C")
                         Text("💧 Humedad:     ${data.humidity.fmtServer()} %")
                         Text("📏 Distancia:   ${data.distance.fmtServer()} cm")
+                        if (data.doorStatus != DoorStatus.UNKNOWN) {
+                            val isOpen = data.doorStatus == DoorStatus.OPEN
+                            Text(
+                                text = if (isOpen) "🟢 Puerta: ABIERTA" else "🔴 Puerta: CERRADA",
+                                color = if (isOpen) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            )
+                        }
                     }
                 }
             }
