@@ -32,9 +32,9 @@ fun DashboardScreen(
         Text("Dashboard", style = MaterialTheme.typography.headlineMedium)
         HorizontalDivider()
 
-        SensorCard(label = "🌡 Temperatura", value = "${data.temperature} °C")
-        SensorCard(label = "💧 Humedad", value = "${data.humidity} %")
-        SensorCard(label = "📏 Distancia", value = "${data.distance} cm")
+        SensorCard(label = "🌡 Temperatura", value = "${data.temperature.formatSensor()} °C")
+        SensorCard(label = "💧 Humedad", value = "${data.humidity.formatSensor()} %")
+        SensorCard(label = "📏 Distancia", value = "${data.distance.formatSensor()} cm")
 
         if (rawData.isNotEmpty()) {
             Text(
@@ -90,3 +90,7 @@ fun SensorCard(label: String, value: String) {
         }
     }
 }
+
+/** Shows two decimal places, or "N/A" when the sensor reports NaN (e.g. DHT not ready). */
+private fun Float.formatSensor(): String =
+    if (this.isNaN()) "N/A" else "%.2f".format(this)

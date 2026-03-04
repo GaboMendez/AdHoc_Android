@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.currentCoroutineContext
 import java.io.IOException
@@ -20,6 +21,7 @@ class BluetoothManager(
     private val onConnectionChanged: (connected: Boolean) -> Unit
 ) {
     companion object {
+        private const val TAG = "BluetoothManager"
         /** Standard Serial Port Profile UUID used by HC-05 */
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
@@ -44,9 +46,11 @@ class BluetoothManager(
                 socket = newSocket
                 bluetoothAdapter.cancelDiscovery()
                 newSocket.connect()
+                Log.i(TAG, "Connected to ${device.name} (${device.address})")
                 withContext(Dispatchers.Main) { onConnectionChanged(true) }
                 readLoop(newSocket)
             } catch (e: IOException) {
+                Log.e(TAG, "Connection failed: ${e.message}")
                 closeSocket()
                 withContext(Dispatchers.Main) { onConnectionChanged(false) }
             }
@@ -73,28 +77,28 @@ class BluetoothManager(
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private suspend fun readLoop(s: BluetoothSocket) {
-        val buffer = ByteArray(1024)
-        val lineBuffer = StringBuilder()
-        val inputStream = s.inputStream
+        // BufferedReader.readLine() handles \r\n, \r, and \n — covers all HC-05 firmware variants
+        Log.d(TAG, "readLoop started")
+        val reader = s.inputStream.bufferedReader(Charsets.UTF_8)
         while (currentCoroutineContext().isActive) {
             try {
-                val bytes = inputStream.read(buffer)
-                lineBuffer.append(String(buffer, 0, bytes, Charsets.UTF_8))
-                // Emit complete lines (terminated by '\n')
-                var newlineIdx = lineBuffer.indexOf('\n')
-                while (newlineIdx >= 0) {
-                    val line = lineBuffer.substring(0, newlineIdx).trim()
-                    lineBuffer.delete(0, newlineIdx + 1)
-                    if (line.isNotEmpty()) {
-                        withContext(Dispatchers.Main) { onDataReceived(line) }
-                    }
-                    newlineIdx = lineBuffer.indexOf('\n')
+                val line = reader.readLine()
+                if (line == null) {
+                    Log.w(TAG, "readLine() returned null — remote closed stream")
+                    break
+                }
+                val trimmed = line.trim()
+                Log.d(TAG, "RAW received: '$trimmed'")
+                if (trimmed.isNotEmpty()) {
+                    withContext(Dispatchers.Main) { onDataReceived(trimmed) }
                 }
             } catch (e: IOException) {
+                Log.e(TAG, "readLoop IOException: ${e.message}")
                 withContext(Dispatchers.Main) { onConnectionChanged(false) }
                 break
             }
         }
+        Log.d(TAG, "readLoop ended")
     }
 
     private fun closeSocket() {

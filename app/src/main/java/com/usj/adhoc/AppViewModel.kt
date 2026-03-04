@@ -38,20 +38,22 @@ class AppViewModel : ViewModel() {
     fun setServerRunning(running: Boolean) { _serverRunning.value = running }
     fun setClientTargetIp(ip: String) { _clientTargetIp.value = ip }
 
-    /** Parses a CSV string like "25.00,60.00,30.00" into SensorData */
+    /** Parses a CSV string like "25.00,60.00,30.00" into SensorData.
+     *  Handles Arduino 'nan' output (case-insensitive) gracefully as Float.NaN. */
     fun parseSensorData(raw: String) {
         val parts = raw.trim().split(",")
         if (parts.size >= 3) {
-            try {
-                _sensorData.value = SensorData(
-                    temperature = parts[0].trim().toFloat(),
-                    humidity = parts[1].trim().toFloat(),
-                    distance = parts[2].trim().toFloat()
-                )
-                _rawData.value = raw.trim()
-            } catch (_: NumberFormatException) { /* ignore malformed data */ }
+            _sensorData.value = SensorData(
+                temperature = parts[0].trim().toFloatOrNan(),
+                humidity    = parts[1].trim().toFloatOrNan(),
+                distance    = parts[2].trim().toFloatOrNan()
+            )
+            _rawData.value = raw.trim()
         }
     }
+
+    private fun String.toFloatOrNan(): Float =
+        this.toFloatOrNull() ?: if (this.equals("nan", ignoreCase = true)) Float.NaN else Float.NaN
 
     fun updateSensorData(data: SensorData) { _sensorData.value = data }
 }
