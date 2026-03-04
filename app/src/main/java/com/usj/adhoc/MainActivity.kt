@@ -66,6 +66,12 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("dashboard") {
                                         launchSingleTop = true
                                     }
+                                },
+                                onNavigateToAdHoc = {
+                                    viewModel.setDeviceRole(DeviceRole.CLIENT)
+                                    navController.navigate("adhoc") {
+                                        launchSingleTop = true
+                                    }
                                 }
                             )
                         }

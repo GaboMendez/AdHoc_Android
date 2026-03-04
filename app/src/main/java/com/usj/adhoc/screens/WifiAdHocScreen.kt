@@ -47,6 +47,8 @@ fun WifiAdHocScreen(
     var clientData by remember { mutableStateOf<SensorData?>(null) }
     var clientError by remember { mutableStateOf("") }
     var autoRefresh by remember { mutableStateOf(false) }
+    var isFetching by remember { mutableStateOf(false) }
+    var isServerStarting by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -54,8 +56,10 @@ fun WifiAdHocScreen(
     LaunchedEffect(role, serverRunning) {
         if (role == DeviceRole.SERVER && serverRunning) {
             if (httpServer == null) {
+                isServerStarting = true
                 httpServer = AdHocHttpServer(8080) { viewModel.sensorData.value }
                 httpServer!!.start()
+                isServerStarting = false
             }
         } else {
             httpServer?.stop()
@@ -67,9 +71,11 @@ fun WifiAdHocScreen(
     LaunchedEffect(autoRefresh, role) {
         if (autoRefresh && role == DeviceRole.CLIENT) {
             while (autoRefresh) {
+                isFetching = true
                 fetchData(targetIp = viewModel.clientTargetIp.value,
                     onSuccess = { clientData = it; clientError = "" },
                     onError = { clientError = it })
+                isFetching = false
                 delay(3_000)
             }
         }
@@ -124,6 +130,14 @@ fun WifiAdHocScreen(
                     onClick = { viewModel.setServerRunning(true) },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Iniciar Servidor") }
+            } else if (isServerStarting) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text("Iniciando servidor…")
+                }
             } else {
                 OutlinedButton(
                     onClick = { viewModel.setServerRunning(false) },
@@ -144,9 +158,9 @@ fun WifiAdHocScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text("GET /data  →  JSON")
-                        Text("Temp: ${sensorData.temperature} °C")
-                        Text("Hum:  ${sensorData.humidity} %")
-                        Text("Dist: ${sensorData.distance} cm")
+                        Text("Temp: ${sensorData.temperature.fmtServer()} °C")
+                        Text("Hum:  ${sensorData.humidity.fmtServer()} %")
+                        Text("Dist: ${sensorData.distance.fmtServer()} cm")
                     }
                 }
             }
@@ -171,15 +185,28 @@ fun WifiAdHocScreen(
                     onClick = {
                         clientError = ""
                         scope.launch {
+                            isFetching = true
                             fetchData(
                                 targetIp = targetIp,
                                 onSuccess = { clientData = it; clientError = "" },
                                 onError = { clientError = it }
                             )
+                            isFetching = false
                         }
                     },
+                    enabled = !isFetching,
                     modifier = Modifier.weight(1f)
-                ) { Text("Solicitar Datos") }
+                ) {
+                    if (isFetching && !autoRefresh) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Solicitar Datos")
+                    }
+                }
 
                 OutlinedButton(
                     onClick = { autoRefresh = !autoRefresh },
@@ -188,7 +215,21 @@ fun WifiAdHocScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     ) else ButtonDefaults.outlinedButtonColors()
                 ) {
-                    Text(if (autoRefresh) "⏹ Auto (ON)" else "▶ Auto (OFF)")
+                    if (autoRefresh) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text("⏹ Auto")
+                        }
+                    } else {
+                        Text("▶ Auto")
+                    }
                 }
             }
 
@@ -200,11 +241,22 @@ fun WifiAdHocScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Datos recibidos:", style = MaterialTheme.typography.titleSmall)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Datos recibidos:", style = MaterialTheme.typography.titleSmall)
+                            if (isFetching) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(4.dp))
-                        Text("🌡 Temperatura: ${data.temperature} °C")
-                        Text("💧 Humedad:     ${data.humidity} %")
-                        Text("📏 Distancia:   ${data.distance} cm")
+                        Text("🌡 Temperatura: ${data.temperature.fmtServer()} °C")
+                        Text("💧 Humedad:     ${data.humidity.fmtServer()} %")
+                        Text("📏 Distancia:   ${data.distance.fmtServer()} cm")
                     }
                 }
             }
@@ -225,6 +277,10 @@ fun WifiAdHocScreen(
     }
 }
 
+/** Formats a sensor float for display; shows "N/A" for NaN values. */
+private fun Float.fmtServer(): String =
+    if (this.isNaN()) "N/A" else "%.2f".format(this)
+
 /** Suspending helper – fetches JSON from the server and parses it. */
 private suspend fun fetchData(
     targetIp: String,
@@ -236,8 +292,8 @@ private suspend fun fetchData(
             val url = URL("http://$targetIp:8080/data")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            conn.connectTimeout = 3_000
-            conn.readTimeout = 3_000
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 10_000
             val text = conn.inputStream.bufferedReader().readText()
             conn.disconnect()
             text

@@ -24,7 +24,8 @@ import com.usj.adhoc.bluetooth.BluetoothManager
 fun ConnectionScreen(
     viewModel: AppViewModel,
     bluetoothManager: BluetoothManager?,
-    onNavigateToDashboard: () -> Unit
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToAdHoc: () -> Unit
 ) {
     val btState by viewModel.btState.collectAsState()
     val deviceName by viewModel.connectedDeviceName.collectAsState()
@@ -42,6 +43,16 @@ fun ConnectionScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Conexión Bluetooth", style = MaterialTheme.typography.headlineMedium)
+        HorizontalDivider()
+
+        // Móvil B/C: skip Bluetooth and go straight to WiFi AdHoc client
+        OutlinedButton(
+            onClick = onNavigateToAdHoc,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("📡 Entrar como Cliente WiFi AdHoc")
+        }
+
         HorizontalDivider()
 
         when (btState) {
