@@ -58,6 +58,11 @@ class BluetoothManager(
     }
 
     fun disconnect() {
+        // Tell Arduino no clients are connected before closing the socket
+        try {
+            socket?.outputStream?.write("CLIENTS:0\n".toByteArray(Charsets.UTF_8))
+            socket?.outputStream?.flush()
+        } catch (_: IOException) { }
         connectJob?.cancel()
         closeSocket()
         scope.launch(Dispatchers.Main) { onConnectionChanged(false) }

@@ -20,6 +20,12 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.usj.adhoc.bluetooth.BluetoothManager as BtManager
 import com.usj.adhoc.screens.ConnectionScreen
 import com.usj.adhoc.screens.ControlScreen
@@ -31,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: AppViewModel by viewModels()
     private var btManager: BtManager? by mutableStateOf(null)
+    // Sends periodic CLIENTS:N heartbeat while BT is connected so the Arduino watchdog stays alive
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var heartbeatJob: Job? = null
 
     // ── Permission request ────────────────────────────────────────────────────
 
@@ -97,6 +106,7 @@ class MainActivity : ComponentActivity() {
                         composable("adhoc") {
                             WifiAdHocScreen(
                                 viewModel = viewModel,
+                                bluetoothManager = btManager,
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -142,6 +152,22 @@ class MainActivity : ComponentActivity() {
                 viewModel.setBtState(
                     if (connected) BtConnectionState.CONNECTED else BtConnectionState.DISCONNECTED
                 )
+                if (connected) {
+                    // Immediately update display to 1 (this phone = 1 device)
+                    btManager?.sendData("CLIENTS:1")
+                    // Heartbeat every 3s: keeps Arduino watchdog alive & reflects live WiFi count
+                    heartbeatJob?.cancel()
+                    heartbeatJob = mainScope.launch {
+                        while (true) {
+                            delay(3_000)
+                            val total = (1 + viewModel.activeWifiClients.value).coerceIn(0, 9)
+                            btManager?.sendData("CLIENTS:$total")
+                        }
+                    }
+                } else {
+                    heartbeatJob?.cancel()
+                    heartbeatJob = null
+                }
             }
         )
     }

@@ -33,11 +33,15 @@ class AppViewModel : ViewModel() {
     private val _clientTargetIp = MutableStateFlow("192.168.43.1")
     val clientTargetIp: StateFlow<String> = _clientTargetIp.asStateFlow()
 
+    private val _activeWifiClients = MutableStateFlow(0)
+    val activeWifiClients: StateFlow<Int> = _activeWifiClients.asStateFlow()
+
     fun setBtState(state: BtConnectionState) { _btState.value = state }
     fun setConnectedDeviceName(name: String) { _connectedDeviceName.value = name }
     fun setDeviceRole(role: DeviceRole) { _deviceRole.value = role }
     fun setServerRunning(running: Boolean) { _serverRunning.value = running }
     fun setClientTargetIp(ip: String) { _clientTargetIp.value = ip }
+    fun setActiveWifiClients(n: Int) { _activeWifiClients.value = n }
 
     /** Parses a CSV string like "25.00,60.00,30.00" into SensorData.
      *  Handles Arduino 'nan' output (case-insensitive) gracefully as Float.NaN. */

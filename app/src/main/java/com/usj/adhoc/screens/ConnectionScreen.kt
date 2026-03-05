@@ -46,14 +46,17 @@ fun ConnectionScreen(
         HorizontalDivider()
 
         // Móvil B/C: skip Bluetooth and go straight to WiFi AdHoc client
-        OutlinedButton(
-            onClick = onNavigateToAdHoc,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("📡 Entrar como Cliente WiFi AdHoc")
-        }
+        // Hidden when already connected as host via Bluetooth
+        if (btState == BtConnectionState.DISCONNECTED) {
+            OutlinedButton(
+                onClick = onNavigateToAdHoc,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("📡 Entrar como Cliente WiFi AdHoc")
+            }
 
-        HorizontalDivider()
+            HorizontalDivider()
+        }
 
         when (btState) {
             BtConnectionState.CONNECTED -> {

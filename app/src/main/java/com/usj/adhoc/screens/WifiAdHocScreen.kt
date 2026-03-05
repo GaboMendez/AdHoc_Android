@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.usj.adhoc.AppViewModel
 import com.usj.adhoc.DeviceRole
 import androidx.compose.ui.graphics.Color
+import com.usj.adhoc.bluetooth.BluetoothManager
 import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
 import com.usj.adhoc.server.AdHocHttpServer
@@ -21,6 +22,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.UUID
 
 /**
  * Screen 4 – WiFi AdHoc
@@ -35,12 +37,17 @@ import java.net.URL
 @Composable
 fun WifiAdHocScreen(
     viewModel: AppViewModel,
+    bluetoothManager: BluetoothManager?,
     onBack: () -> Unit
 ) {
     val role by viewModel.deviceRole.collectAsState()
     val serverRunning by viewModel.serverRunning.collectAsState()
     val sensorData by viewModel.sensorData.collectAsState()
     val targetIp by viewModel.clientTargetIp.collectAsState()
+
+    // Stable unique ID for this device instance — survives recompositions, distinguishes
+    // emulators that share the same outbound IP on the host machine's network.
+    val clientId = remember { UUID.randomUUID().toString() }
 
     // NanoHTTPD instance – only alive while serverRunning == true in SERVER mode
     var httpServer by remember { mutableStateOf<AdHocHttpServer?>(null) }
@@ -66,6 +73,10 @@ fun WifiAdHocScreen(
         } else {
             httpServer?.stop()
             httpServer = null
+            // Reset client count immediately so display and UI reflect 0 WiFi clients
+            viewModel.setActiveWifiClients(0)
+            // Notify Arduino: back to 1 device (BT only) if still connected
+            bluetoothManager?.sendData("CLIENTS:1")
         }
     }
 
@@ -74,7 +85,7 @@ fun WifiAdHocScreen(
         if (autoRefresh && role == DeviceRole.CLIENT) {
             while (autoRefresh) {
                 isFetching = true
-                fetchData(targetIp = viewModel.clientTargetIp.value,
+                fetchData(targetIp = viewModel.clientTargetIp.value, clientId = clientId,
                     onSuccess = { clientData = it; clientError = "" },
                     onError = { clientError = it })
                 isFetching = false
@@ -87,6 +98,24 @@ fun WifiAdHocScreen(
         onDispose {
             httpServer?.stop()
             httpServer = null
+        }
+    }
+
+    // Poll WiFi client count every 3s while server is running; send total to Arduino display
+    // Total = 1 (this BT phone) + active WiFi clients, clamped to 0-9
+    LaunchedEffect(serverRunning, role) {
+        if (role == DeviceRole.SERVER && serverRunning) {
+            var lastSent = -1
+            while (true) {
+                val wifiClients = httpServer?.getActiveClientCount() ?: 0
+                val total = (1 + wifiClients).coerceIn(0, 9)
+                viewModel.setActiveWifiClients(wifiClients)
+                if (total != lastSent) {
+                    bluetoothManager?.sendData("CLIENTS:$total")
+                    lastSent = total
+                }
+                delay(3_000)
+            }
         }
     }
 
@@ -171,7 +200,10 @@ fun WifiAdHocScreen(
                                 color = if (sensorData.doorStatus == DoorStatus.OPEN)
                                     Color(0xFF2E7D32) else Color(0xFFC62828)
                             )
-                        }                      
+                        }
+                        val wifiCount by viewModel.activeWifiClients.collectAsState()
+                        Spacer(Modifier.height(4.dp))
+                        Text("📶 Dispositivos:\n 1 BT + $wifiCount WiFi = ${1 + wifiCount} total")
                     }
                 }
             }
@@ -199,6 +231,7 @@ fun WifiAdHocScreen(
                             isFetching = true
                             fetchData(
                                 targetIp = targetIp,
+                                clientId = clientId,
                                 onSuccess = { clientData = it; clientError = "" },
                                 onError = { clientError = it }
                             )
@@ -302,12 +335,13 @@ private fun Float.fmtServer(): String =
 /** Suspending helper – fetches JSON from the server and parses it. */
 private suspend fun fetchData(
     targetIp: String,
+    clientId: String,
     onSuccess: (SensorData) -> Unit,
     onError: (String) -> Unit
 ) {
     try {
         val result = withContext(Dispatchers.IO) {
-            val url = URL("http://$targetIp:8080/data")
+            val url = URL("http://$targetIp:8080/data?id=$clientId")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.connectTimeout = 10_000
