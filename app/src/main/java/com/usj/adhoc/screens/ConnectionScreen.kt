@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.usj.adhoc.AppViewModel
 import com.usj.adhoc.BtConnectionState
@@ -50,6 +51,7 @@ fun ConnectionScreen(
         if (btState == BtConnectionState.DISCONNECTED) {
             OutlinedButton(
                 onClick = onNavigateToAdHoc,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("📡 Entrar como Cliente WiFi AdHoc")
@@ -62,7 +64,7 @@ fun ConnectionScreen(
             BtConnectionState.CONNECTED -> {
                 Text(
                     "✅ Conectado a: $deviceName",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color.Black,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Button(onClick = onNavigateToDashboard, modifier = Modifier.fillMaxWidth()) {
@@ -135,7 +137,7 @@ private fun BluetoothDeviceCard(device: BluetoothDevice, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text("Conectar →", color = MaterialTheme.colorScheme.primary)
+            Text("Conectar →", color = Color.Black)
         }
     }
 }

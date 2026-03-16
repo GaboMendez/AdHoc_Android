@@ -2,10 +2,11 @@ package com.usj.adhoc.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Logo-inspired palette (warm red/orange)
+val FlameOrange = Color(0xFFF57C00)
+val EmberRed = Color(0xFFD62828)
+val GoldenSpark = Color(0xFFFFA000)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val FlameOrangeDark = Color(0xFFFFB74D)
+val EmberRedDark = Color(0xFFFF8A80)
+val GoldenSparkDark = Color(0xFFFFCC80)
