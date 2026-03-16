@@ -38,14 +38,10 @@ fun DashboardScreen(
         SensorCard(label = "💧 Humedad", value = data.humidity.formatSensor("%"))
         SensorCard(label = "📏 Distancia", value = data.distance.formatSensor("cm"))
         DoorCard(status = data.doorStatus)
+        SensorCard(label = "💡 LED", value = if (data.ledOn) "ON" else "OFF")
+        SensorCard(label = "🔔 Buzzer", value = if (data.buzzerOn) "ON" else "OFF")
 
-        if (rawData.isNotEmpty()) {
-            Text(
-                text = "Raw: $rawData",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-        } else {
+        if (!rawData.isNotEmpty()) {
             Text(
                 text = "Esperando datos del Arduino…",
                 style = MaterialTheme.typography.bodySmall,
