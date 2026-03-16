@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import com.usj.adhoc.bluetooth.BluetoothManager
 import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
-import com.usj.adhoc.server.AdHocHttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,36 +48,13 @@ fun WifiAdHocScreen(
     // emulators that share the same outbound IP on the host machine's network.
     val clientId = remember { UUID.randomUUID().toString() }
 
-    // NanoHTTPD instance – only alive while serverRunning == true in SERVER mode
-    var httpServer by remember { mutableStateOf<AdHocHttpServer?>(null) }
-
     // Client-side state
     var clientData by remember { mutableStateOf<SensorData?>(null) }
     var clientError by remember { mutableStateOf("") }
     var autoRefresh by remember { mutableStateOf(false) }
     var isFetching by remember { mutableStateOf(false) }
-    var isServerStarting by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
-
-    // Start / stop server when flag changes
-    LaunchedEffect(role, serverRunning) {
-        if (role == DeviceRole.SERVER && serverRunning) {
-            if (httpServer == null) {
-                isServerStarting = true
-                httpServer = AdHocHttpServer(8080) { viewModel.sensorData.value }
-                httpServer!!.start()
-                isServerStarting = false
-            }
-        } else {
-            httpServer?.stop()
-            httpServer = null
-            // Reset client count immediately so display and UI reflect 0 WiFi clients
-            viewModel.setActiveWifiClients(0)
-            // Notify Arduino: back to 1 device (BT only) if still connected
-            bluetoothManager?.sendData("CLIENTS:1")
-        }
-    }
 
     // Auto-refresh loop for client
     LaunchedEffect(autoRefresh, role) {
@@ -94,10 +70,11 @@ fun WifiAdHocScreen(
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            httpServer?.stop()
-            httpServer = null
+    // When server stops, immediately reset WiFi count and notify Arduino
+    LaunchedEffect(serverRunning) {
+        if (!serverRunning) {
+            viewModel.setActiveWifiClients(0)
+            bluetoothManager?.sendData("CLIENTS:1")
         }
     }
 
@@ -107,7 +84,7 @@ fun WifiAdHocScreen(
         if (role == DeviceRole.SERVER && serverRunning) {
             var lastSent = -1
             while (true) {
-                val wifiClients = httpServer?.getActiveClientCount() ?: 0
+                val wifiClients = viewModel.httpServer?.getActiveClientCount() ?: 0
                 val total = (1 + wifiClients).coerceIn(0, 9)
                 viewModel.setActiveWifiClients(wifiClients)
                 if (total != lastSent) {
@@ -161,14 +138,6 @@ fun WifiAdHocScreen(
                     onClick = { viewModel.setServerRunning(true) },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Iniciar Servidor") }
-            } else if (isServerStarting) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text("Iniciando servidor…")
-                }
             } else {
                 OutlinedButton(
                     onClick = { viewModel.setServerRunning(false) },
@@ -201,6 +170,8 @@ fun WifiAdHocScreen(
                                     Color(0xFF2E7D32) else Color(0xFFC62828)
                             )
                         }
+                        Text("💡 LED: ${if (sensorData.ledOn) "ON" else "OFF"}")
+                        Text("🔔 Buzzer: ${if (sensorData.buzzerOn) "ON" else "OFF"}")
                         val wifiCount by viewModel.activeWifiClients.collectAsState()
                         Spacer(Modifier.height(4.dp))
                         Text("📶 Dispositivos:\n 1 BT + $wifiCount WiFi = ${1 + wifiCount} total")
@@ -308,6 +279,8 @@ fun WifiAdHocScreen(
                                 color = if (isOpen) Color(0xFF2E7D32) else Color(0xFFC62828)
                             )
                         }
+                        Text("💡 LED:          ${if (data.ledOn) "ON" else "OFF"}")
+                        Text("🔔 Buzzer:       ${if (data.buzzerOn) "ON" else "OFF"}")
                     }
                 }
             }
@@ -344,23 +317,29 @@ private suspend fun fetchData(
             val url = URL("http://$targetIp:8080/data?id=$clientId")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 10_000
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 15_000
             val text = conn.inputStream.bufferedReader().readText()
             conn.disconnect()
             text
         }
         val json = JSONObject(result)
+        val control = json.optJSONObject("control")
+        val parsedDoor = when (
+            (control?.optString("door") ?: json.optString("door", "UNKNOWN")).uppercase()
+        ) {
+            "OPEN"   -> DoorStatus.OPEN
+            "CLOSED" -> DoorStatus.CLOSED
+            else     -> DoorStatus.UNKNOWN
+        }
         onSuccess(
             SensorData(
                 temperature = json.getDouble("temp").toFloat(),
                 humidity = json.getDouble("hum").toFloat(),
                 distance = json.getDouble("dist").toFloat(),
-                doorStatus = when (json.optString("door", "UNKNOWN").uppercase()) {
-                    "OPEN"   -> DoorStatus.OPEN
-                    "CLOSED" -> DoorStatus.CLOSED
-                    else     -> DoorStatus.UNKNOWN
-                }
+                doorStatus = parsedDoor,
+                ledOn = control?.optBoolean("led") ?: json.optBoolean("led", false),
+                buzzerOn = control?.optBoolean("buzzer") ?: json.optBoolean("buzzer", false)
             )
         )
     } catch (e: Exception) {

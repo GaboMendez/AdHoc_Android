@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.usj.adhoc.AppViewModel
+import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.bluetooth.BluetoothManager
 
 /**
@@ -14,6 +16,7 @@ import com.usj.adhoc.bluetooth.BluetoothManager
  */
 @Composable
 fun ControlScreen(
+    viewModel: AppViewModel,
     bluetoothManager: BluetoothManager?,
     onBack: () -> Unit
 ) {
@@ -34,7 +37,10 @@ fun ControlScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Button(
-                onClick = { bluetoothManager?.sendData("LED_ON") },
+                onClick = {
+                    bluetoothManager?.sendData("LED_ON")
+                    viewModel.setLedState(true)
+                },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -43,7 +49,10 @@ fun ControlScreen(
                 Text("LED ON")
             }
             OutlinedButton(
-                onClick = { bluetoothManager?.sendData("LED_OFF") },
+                onClick = {
+                    bluetoothManager?.sendData("LED_OFF")
+                    viewModel.setLedState(false)
+                },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("LED OFF")
@@ -58,7 +67,10 @@ fun ControlScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Button(
-                onClick = { bluetoothManager?.sendData("DOOR_OPEN") },
+                onClick = {
+                    bluetoothManager?.sendData("DOOR_OPEN")
+                    viewModel.setDoorState(DoorStatus.OPEN)
+                },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
@@ -67,7 +79,10 @@ fun ControlScreen(
                 Text("Abrir")
             }
             OutlinedButton(
-                onClick = { bluetoothManager?.sendData("DOOR_CLOSE") },
+                onClick = {
+                    bluetoothManager?.sendData("DOOR_CLOSE")
+                    viewModel.setDoorState(DoorStatus.CLOSED)
+                },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("Cerrar")
@@ -82,7 +97,10 @@ fun ControlScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Button(
-                onClick = { bluetoothManager?.sendData("BUZZER_ON") },
+                onClick = {
+                    bluetoothManager?.sendData("BUZZER_ON")
+                    viewModel.setBuzzerState(true)
+                },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.tertiary
@@ -91,7 +109,10 @@ fun ControlScreen(
                 Text("BUZZER ON")
             }
             OutlinedButton(
-                onClick = { bluetoothManager?.sendData("BUZZER_OFF") },
+                onClick = {
+                    bluetoothManager?.sendData("BUZZER_OFF")
+                    viewModel.setBuzzerState(false)
+                },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("BUZZER OFF")

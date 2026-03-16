@@ -97,6 +97,7 @@ class MainActivity : ComponentActivity() {
                         // Screen 3 – LED / Buzzer Control
                         composable("control") {
                             ControlScreen(
+                                viewModel = viewModel,
                                 bluetoothManager = btManager,
                                 onBack = { navController.popBackStack() }
                             )

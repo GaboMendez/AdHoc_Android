@@ -3,6 +3,7 @@ package com.usj.adhoc
 import androidx.lifecycle.ViewModel
 import com.usj.adhoc.model.DoorStatus
 import com.usj.adhoc.model.SensorData
+import com.usj.adhoc.server.AdHocHttpServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,16 +40,49 @@ class AppViewModel : ViewModel() {
     fun setBtState(state: BtConnectionState) { _btState.value = state }
     fun setConnectedDeviceName(name: String) { _connectedDeviceName.value = name }
     fun setDeviceRole(role: DeviceRole) { _deviceRole.value = role }
-    fun setServerRunning(running: Boolean) { _serverRunning.value = running }
     fun setClientTargetIp(ip: String) { _clientTargetIp.value = ip }
     fun setActiveWifiClients(n: Int) { _activeWifiClients.value = n }
+    fun setLedState(on: Boolean) { _sensorData.value = _sensorData.value.copy(ledOn = on) }
+    fun setBuzzerState(on: Boolean) { _sensorData.value = _sensorData.value.copy(buzzerOn = on) }
+    fun setDoorState(state: DoorStatus) { _sensorData.value = _sensorData.value.copy(doorStatus = state) }
+
+    // ── HTTP Server (survives navigation) ─────────────────────────────────────
+    /** Exposed so WifiAdHocScreen can poll getActiveClientCount(). */
+    var httpServer: AdHocHttpServer? = null
+        private set
+
+    fun startHttpServer() {
+        if (httpServer == null) {
+            httpServer = AdHocHttpServer(8080) { sensorData.value }
+            httpServer!!.start()
+        }
+        _serverRunning.value = true
+    }
+
+    fun stopHttpServer() {
+        httpServer?.stop()
+        httpServer = null
+        _serverRunning.value = false
+        _activeWifiClients.value = 0
+    }
+
+    fun setServerRunning(running: Boolean) {
+        if (running) startHttpServer() else stopHttpServer()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        httpServer?.stop()
+        httpServer = null
+    }
 
     /** Parses a CSV string like "25.00,60.00,30.00" into SensorData.
      *  Handles Arduino 'nan' output (case-insensitive) gracefully as Float.NaN. */
     fun parseSensorData(raw: String) {
         val parts = raw.trim().split(",")
         if (parts.size >= 3) {
-            _sensorData.value = SensorData(
+            val current = _sensorData.value
+            _sensorData.value = current.copy(
                 temperature = parts[0].trim().toFloatOrNan(),
                 humidity    = parts[1].trim().toFloatOrNan(),
                 distance    = parts[2].trim().toFloatOrNan(),

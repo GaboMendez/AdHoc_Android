@@ -55,7 +55,12 @@ class AdHocHttpServer(
             append("\"temp\": ${data.temperature},")
             append("\"hum\": ${data.humidity},")
             append("\"dist\": ${data.distance},")
-            append("\"door\": \"${data.doorStatus.name}\"")
+            append("\"door\": \"${data.doorStatus.name}\",")
+            append("\"control\": {")
+            append("\"door\": \"${data.doorStatus.name}\",")
+            append("\"led\": ${data.ledOn},")
+            append("\"buzzer\": ${data.buzzerOn}")
+            append("}")
             append("}")
         }
         val response = newFixedLengthResponse(Response.Status.OK, "application/json", json)
