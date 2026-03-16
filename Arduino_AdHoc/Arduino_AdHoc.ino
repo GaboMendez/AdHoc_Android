@@ -20,6 +20,8 @@ Servo doorServo;
 
 unsigned long lastDetectedTime = 0;
 bool doorOpen = false;
+bool ledOn = false;
+bool buzzerOn = false;
 
 // Watchdog: reset display to 0 if no BT command received for this many ms
 unsigned long lastBtActivity = 0;
@@ -111,7 +113,11 @@ void loop() {
   bt.print(",");
   bt.print(dist);
   bt.print(",");
-  bt.println(doorOpen ? "OPEN" : "CLOSED");
+  bt.print(doorOpen ? "OPEN" : "CLOSED");
+  bt.print(",");
+  bt.print(ledOn ? "ON" : "OFF");
+  bt.print(",");
+  bt.println(buzzerOn ? "ON" : "OFF");
 
   // Leer comandos desde app
   if (bt.available()) {
@@ -119,10 +125,10 @@ void loop() {
     String cmd = bt.readStringUntil('\n');
     cmd.trim();
 
-    if (cmd == "LED_ON") digitalWrite(LED, HIGH);
-    if (cmd == "LED_OFF") digitalWrite(LED, LOW);
-    if (cmd == "BUZZER_ON") digitalWrite(BUZZER, HIGH);
-    if (cmd == "BUZZER_OFF") digitalWrite(BUZZER, LOW);
+    if (cmd == "LED_ON") { digitalWrite(LED, HIGH); ledOn = true; }
+    if (cmd == "LED_OFF") { digitalWrite(LED, LOW); ledOn = false; }
+    if (cmd == "BUZZER_ON") { digitalWrite(BUZZER, HIGH); buzzerOn = true; }
+    if (cmd == "BUZZER_OFF") { digitalWrite(BUZZER, LOW); buzzerOn = false; }
     if (cmd == "DOOR_OPEN") { doorServo.write(90); doorOpen = true; lastDetectedTime = millis(); }
     if (cmd == "DOOR_CLOSE") { doorServo.write(0); doorOpen = false; }
 

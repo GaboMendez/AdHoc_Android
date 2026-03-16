@@ -92,7 +92,13 @@ class AppViewModel : ViewModel() {
                         "CLOSED" -> DoorStatus.CLOSED
                         else     -> DoorStatus.UNKNOWN
                     }
-                } else DoorStatus.UNKNOWN
+                } else DoorStatus.UNKNOWN,
+                ledOn = if (parts.size >= 5) {
+                    parts[4].trim().equals("ON", ignoreCase = true)
+                } else current.ledOn,
+                buzzerOn = if (parts.size >= 6) {
+                    parts[5].trim().equals("ON", ignoreCase = true)
+                } else current.buzzerOn
             )
             _rawData.value = raw.trim()
         }
