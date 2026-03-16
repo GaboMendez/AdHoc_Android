@@ -28,9 +28,12 @@ Main features:
 
 ```mermaid
 flowchart LR
-    A[Arduino UNO] <-- Bluetooth --> M1[Mobile A\nAndroid App]
-    M1 <-- HTTP /data --> M2[Mobile B]
-    M1 <-- HTTP /data --> M3[Mobile C]
+    A[Arduino UNO] <-- Bluetooth --> M1[Mobile A 
+    Android App]
+  M1 --> W[WiFi AdHoc / Hotspot
+  HTTP Server :8080]
+  W <-- HTTP /data --> M2[Mobile B]
+  W <-- HTTP /data --> M3[Mobile C]
     A --> S1[DHT11]
     A --> S2[Ultrasonic Sensor]
     A --> S3[Servo Door]
