@@ -70,32 +70,6 @@ fun WifiAdHocScreen(
         }
     }
 
-    // When server stops, immediately reset WiFi count and notify Arduino
-    LaunchedEffect(serverRunning) {
-        if (!serverRunning) {
-            viewModel.setActiveWifiClients(0)
-            bluetoothManager?.sendData("CLIENTS:1")
-        }
-    }
-
-    // Poll WiFi client count every 3s while server is running; send total to Arduino display
-    // Total = 1 (this BT phone) + active WiFi clients, clamped to 0-9
-    LaunchedEffect(serverRunning, role) {
-        if (role == DeviceRole.SERVER && serverRunning) {
-            var lastSent = -1
-            while (true) {
-                val wifiClients = viewModel.httpServer?.getActiveClientCount() ?: 0
-                val total = (1 + wifiClients).coerceIn(0, 9)
-                viewModel.setActiveWifiClients(wifiClients)
-                if (total != lastSent) {
-                    bluetoothManager?.sendData("CLIENTS:$total")
-                    lastSent = total
-                }
-                delay(3_000)
-            }
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()

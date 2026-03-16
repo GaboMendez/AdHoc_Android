@@ -155,17 +155,29 @@ class MainActivity : ComponentActivity() {
                 )
                 if (connected) {
                     // Immediately update display to 1 (this phone = 1 device)
+                    viewModel.setActiveWifiClients(0)
                     btManager?.sendData("CLIENTS:1")
-                    // Heartbeat every 3s: keeps Arduino watchdog alive & reflects live WiFi count
+                    // Heartbeat every 3s: keeps Arduino watchdog alive and polls WiFi clients
+                    // even when the user is on a different screen.
                     heartbeatJob?.cancel()
                     heartbeatJob = mainScope.launch {
                         while (true) {
                             delay(3_000)
-                            val total = (1 + viewModel.activeWifiClients.value).coerceIn(0, 9)
+                            val wifiClients = if (
+                                viewModel.serverRunning.value &&
+                                viewModel.deviceRole.value == DeviceRole.SERVER
+                            ) {
+                                viewModel.httpServer?.getActiveClientCount() ?: 0
+                            } else {
+                                0
+                            }
+                            viewModel.setActiveWifiClients(wifiClients)
+                            val total = (1 + wifiClients).coerceIn(0, 9)
                             btManager?.sendData("CLIENTS:$total")
                         }
                     }
                 } else {
+                    viewModel.setActiveWifiClients(0)
                     heartbeatJob?.cancel()
                     heartbeatJob = null
                 }
